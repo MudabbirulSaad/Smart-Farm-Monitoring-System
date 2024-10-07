@@ -10,18 +10,30 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 export default function SensorDataChart() {
   const [data, setData] = useState<SensorData[]>([])
+  const [isConnected, setIsConnected] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/sensor-data')
-        if (!response.ok) {
+        if (response.ok) {
+          const result = await response.json()
+          if (Array.isArray(result.data)) {
+            setData(result.data)
+            setIsConnected(true)
+            setError(null)
+          } else {
+            throw new Error('Received data is not an array')
+          }
+        } else {
           throw new Error('Failed to fetch data')
         }
-        const result = await response.json()
-        setData(result)
       } catch (error) {
         console.error('Error fetching data:', error)
+        setIsConnected(false)
+        setData([])
+        setError(error instanceof Error ? error.message : 'An unknown error occurred')
       }
     }
 
@@ -98,9 +110,15 @@ export default function SensorDataChart() {
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">Sensor Data Over Time</h2>
-      <div className="h-[400px]">
-        <Line data={chartData} options={options} />
-      </div>
+      {isConnected && data.length > 0 ? (
+        <div className="h-[400px]">
+          <Line data={chartData} options={options} />
+        </div>
+      ) : (
+        <div className="h-[400px] flex items-center justify-center text-gray-500">
+          {error ? `Error: ${error}` : 'No data available. Please check your connection.'}
+        </div>
+      )}
     </div>
   )
 }

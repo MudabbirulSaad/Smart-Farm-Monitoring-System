@@ -5,6 +5,7 @@ import { SensorData } from '@/types/SensorData'
 
 export default function LatestReadings() {
   const [latestData, setLatestData] = useState<SensorData | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchLatestData = async () => {
@@ -14,9 +15,17 @@ export default function LatestReadings() {
           throw new Error('Failed to fetch data')
         }
         const result = await response.json()
-        setLatestData(result[result.length - 1] || null)
+        if (Array.isArray(result.data) && result.data.length > 0) {
+          setLatestData(result.data[result.data.length - 1])
+          setError(null)
+        } else {
+          setLatestData(null)
+          setError('No data available')
+        }
       } catch (error) {
         console.error('Error fetching latest data:', error)
+        setLatestData(null)
+        setError('Error fetching data')
       }
     }
 
@@ -24,6 +33,10 @@ export default function LatestReadings() {
     const intervalId = setInterval(fetchLatestData, 5000)
     return () => clearInterval(intervalId)
   }, [])
+
+  if (error) {
+    return <div className="text-center text-red-600">{error}</div>
+  }
 
   if (!latestData) {
     return <div className="text-center text-gray-600">Loading latest readings...</div>
